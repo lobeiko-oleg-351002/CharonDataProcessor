@@ -1,9 +1,14 @@
 using CharonDataProcessor.Configuration;
 using CharonDataProcessor.Consumers;
+using CharonDataProcessor.Data;
+using CharonDataProcessor.Middleware;
+using CharonDataProcessor.Middleware.Interfaces;
+using CharonDataProcessor.Models;
 using CharonDataProcessor.Services;
+using CharonDataProcessor.Services.Decorators;
 using CharonDataProcessor.Services.Interfaces;
 using MassTransit;
-using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Serilog.Events;
 
@@ -36,8 +41,26 @@ try
 
     builder.Services.Configure<RabbitMqOptions>(
         builder.Configuration.GetSection(RabbitMqOptions.SectionName));
+    builder.Services.Configure<DatabaseOptions>(
+        builder.Configuration.GetSection(DatabaseOptions.SectionName));
 
-    builder.Services.AddScoped<IMetricProcessorService, MetricProcessorService>();
+    var databaseOptions = builder.Configuration.GetSection(DatabaseOptions.SectionName).Get<DatabaseOptions>();
+    if (!string.IsNullOrEmpty(databaseOptions?.ConnectionString))
+    {
+        builder.Services.AddDbContext<ApplicationDbContext>(options =>
+            options.UseSqlServer(databaseOptions.ConnectionString));
+    }
+
+    builder.Services.AddScoped<ILoggingService, LoggingService>();
+    builder.Services.AddScoped<IExceptionHandlingService, ExceptionHandlingService>();
+
+    builder.Services.AddScoped<MetricProcessorService>();
+    builder.Services.AddScoped<IMetricProcessorService>(serviceProvider =>
+    {
+        var inner = serviceProvider.GetRequiredService<MetricProcessorService>();
+        var exceptionHandling = serviceProvider.GetRequiredService<IExceptionHandlingService>();
+        return new MetricProcessorServiceDecorator(inner, exceptionHandling);
+    });
 
     builder.Services.AddMassTransit(x =>
     {
@@ -54,12 +77,28 @@ try
                     h.Password(options.Password);
                 });
 
+                cfg.Message<MetricMessage>(m => m.SetEntityName(options.ExchangeName));
+                
                 cfg.ConfigureEndpoints(context);
             }
         });
     });
 
     var app = builder.Build();
+    
+    using (var scope = app.Services.CreateScope())
+    {
+        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        try
+        {
+            dbContext.Database.Migrate();
+            Log.Information("Database migrations applied successfully");
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Could not apply database migrations. Database may not be available yet.");
+        }
+    }
     
     if (app.Environment.IsDevelopment())
     {
