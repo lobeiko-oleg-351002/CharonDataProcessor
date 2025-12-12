@@ -17,7 +17,7 @@ public class MetricProcessorServiceDecorator : IMetricProcessorService
         _exceptionHandling = exceptionHandling;
     }
 
-    public async Task ProcessMetricAsync(Models.MetricMessage metric, CancellationToken cancellationToken = default)
+    public async Task ProcessMetricAsync(MetricMessage metric, CancellationToken cancellationToken = default)
     {
         await _exceptionHandling.ExecuteAsync(
             async () => await _inner.ProcessMetricAsync(metric, cancellationToken),

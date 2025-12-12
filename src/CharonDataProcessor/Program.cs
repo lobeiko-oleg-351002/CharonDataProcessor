@@ -3,13 +3,12 @@ using CharonDataProcessor.Consumers;
 using CharonDataProcessor.Data;
 using CharonDataProcessor.Middleware;
 using CharonDataProcessor.Middleware.Interfaces;
+using CharonDataProcessor.Models;
 using CharonDataProcessor.Services;
 using CharonDataProcessor.Services.Decorators;
 using CharonDataProcessor.Services.Interfaces;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.Events;
 
@@ -78,6 +77,8 @@ try
                     h.Password(options.Password);
                 });
 
+                cfg.Message<MetricMessage>(m => m.SetEntityName(options.ExchangeName));
+                
                 cfg.ConfigureEndpoints(context);
             }
         });
