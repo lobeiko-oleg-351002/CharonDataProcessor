@@ -1,12 +1,12 @@
 using CharonDataProcessor.Configuration;
 using CharonDataProcessor.Consumers;
-using CharonDataProcessor.Data;
 using CharonDataProcessor.Middleware;
 using CharonDataProcessor.Middleware.Interfaces;
 using CharonDataProcessor.Models;
 using CharonDataProcessor.Services;
 using CharonDataProcessor.Services.Decorators;
 using CharonDataProcessor.Services.Interfaces;
+using CharonDbContext.Data;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Serilog;

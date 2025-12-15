@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace CharonDataProcessor.Migrations
 {
-    [DbContext(typeof(CharonDataProcessor.Data.ApplicationDbContext))]
+    [DbContext(typeof(CharonDbContext.Data.ApplicationDbContext))]
     partial class ApplicationDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
@@ -20,7 +20,7 @@ namespace CharonDataProcessor.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("CharonDataProcessor.Models.Metric", b =>
+            modelBuilder.Entity("CharonDbContext.Models.Metric", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()

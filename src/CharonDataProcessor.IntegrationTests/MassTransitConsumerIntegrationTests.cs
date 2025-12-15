@@ -1,9 +1,9 @@
 using CharonDataProcessor.Configuration;
 using CharonDataProcessor.Consumers;
-using CharonDataProcessor.Data;
 using CharonDataProcessor.Models;
 using CharonDataProcessor.Services;
 using CharonDataProcessor.Services.Interfaces;
+using CharonDbContext.Data;
 using FluentAssertions;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
