@@ -1,6 +1,6 @@
 using CharonDataProcessor.Middleware.Interfaces;
-using CharonDataProcessor.Models;
 using CharonDataProcessor.Services.Interfaces;
+using CharonDbContext.Messages;
 
 namespace CharonDataProcessor.Services.Decorators;
 

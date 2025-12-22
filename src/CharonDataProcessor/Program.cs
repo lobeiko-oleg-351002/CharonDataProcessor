@@ -2,7 +2,7 @@ using CharonDataProcessor.Configuration;
 using CharonDataProcessor.Consumers;
 using CharonDataProcessor.Middleware;
 using CharonDataProcessor.Middleware.Interfaces;
-using CharonDataProcessor.Models;
+using CharonDbContext.Messages;
 using CharonDataProcessor.Services;
 using CharonDataProcessor.Services.Decorators;
 using CharonDataProcessor.Services.Interfaces;
@@ -43,16 +43,24 @@ try
         builder.Configuration.GetSection(RabbitMqOptions.SectionName));
     builder.Services.Configure<DatabaseOptions>(
         builder.Configuration.GetSection(DatabaseOptions.SectionName));
+    builder.Services.Configure<GatewayOptions>(
+        builder.Configuration.GetSection(GatewayOptions.SectionName));
 
     var databaseOptions = builder.Configuration.GetSection(DatabaseOptions.SectionName).Get<DatabaseOptions>();
     if (!string.IsNullOrEmpty(databaseOptions?.ConnectionString))
     {
         builder.Services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseSqlServer(databaseOptions.ConnectionString));
+        {
+            options.UseSqlServer(databaseOptions.ConnectionString);
+            options.ConfigureWarnings(warnings =>
+                warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+        });
     }
 
+    builder.Services.AddHttpClient();
     builder.Services.AddScoped<ILoggingService, LoggingService>();
     builder.Services.AddScoped<IExceptionHandlingService, ExceptionHandlingService>();
+    builder.Services.AddScoped<INotificationService, NotificationService>();
 
     builder.Services.AddScoped<MetricProcessorService>();
     builder.Services.AddScoped<IMetricProcessorService>(serviceProvider =>
@@ -71,14 +79,18 @@ try
             var options = builder.Configuration.GetSection(RabbitMqOptions.SectionName).Get<RabbitMqOptions>();
             if (options != null)
             {
+                Log.Information("===> Configuring MassTransit RabbitMQ");
+                
                 cfg.Host(new Uri($"rabbitmq://{options.HostName}:{options.Port}"), h =>
                 {
                     h.Username(options.UserName);
                     h.Password(options.Password);
                 });
 
-                cfg.Message<MetricMessage>(m => m.SetEntityName(options.ExchangeName));
-                
+                // Use CharonDbContext.Messages.MetricMessage - shared contract!
+                Log.Information("===> Using CharonDbContext.Messages.MetricMessage");
+
+                // Let MassTransit auto-configure the endpoint based on the message type
                 cfg.ConfigureEndpoints(context);
             }
         });
@@ -91,12 +103,19 @@ try
         var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         try
         {
-            dbContext.Database.Migrate();
-            Log.Information("Database migrations applied successfully");
+            // Use EnsureCreated for development - creates database schema without migrations
+            if (dbContext.Database.EnsureCreated())
+            {
+                Log.Information("Database created successfully");
+            }
+            else
+            {
+                Log.Information("Database already exists");
+            }
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "Could not apply database migrations. Database may not be available yet.");
+            Log.Warning(ex, "Could not create database. Database may not be available yet.");
         }
     }
     
