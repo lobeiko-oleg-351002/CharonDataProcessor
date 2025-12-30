@@ -1,4 +1,4 @@
-using CharonDataProcessor.Models;
+using CharonDbContext.Messages;
 
 namespace CharonDataProcessor.Services.Interfaces;
 

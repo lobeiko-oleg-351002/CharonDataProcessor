@@ -28,9 +28,9 @@ namespace CharonDataProcessor.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Metrics_Type",
+                name: "IX_Metrics_CreatedAt",
                 table: "Metrics",
-                column: "Type");
+                column: "CreatedAt");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Metrics_Name",
@@ -38,9 +38,9 @@ namespace CharonDataProcessor.Migrations
                 column: "Name");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Metrics_CreatedAt",
+                name: "IX_Metrics_Type",
                 table: "Metrics",
-                column: "CreatedAt");
+                column: "Type");
         }
 
         /// <inheritdoc />
