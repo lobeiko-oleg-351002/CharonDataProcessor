@@ -1,6 +1,7 @@
-using CharonDataProcessor.Models;
 using CharonDataProcessor.Services;
+using CharonDataProcessor.Services.Interfaces;
 using CharonDbContext.Data;
+using CharonDbContext.Messages;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -11,6 +12,7 @@ namespace CharonDataProcessor.Tests.Services;
 public class MetricProcessorServiceTests
 {
     private readonly ApplicationDbContext _dbContext;
+    private readonly Mock<INotificationService> _notificationServiceMock;
     private readonly Mock<ILogger<MetricProcessorService>> _loggerMock;
     private readonly MetricProcessorService _service;
 
@@ -21,8 +23,9 @@ public class MetricProcessorServiceTests
             .Options;
 
         _dbContext = new ApplicationDbContext(options);
+        _notificationServiceMock = new Mock<INotificationService>();
         _loggerMock = new Mock<ILogger<MetricProcessorService>>();
-        _service = new MetricProcessorService(_dbContext, _loggerMock.Object);
+        _service = new MetricProcessorService(_dbContext, _notificationServiceMock.Object, _loggerMock.Object);
     }
 
     [Fact]

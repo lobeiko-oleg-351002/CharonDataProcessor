@@ -2,7 +2,6 @@ using CharonDataProcessor.Services.Interfaces;
 using CharonDbContext.Data;
 using CharonDbContext.Messages;
 using CharonDbContext.Models;
-using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
 namespace CharonDataProcessor.Services;
@@ -24,22 +23,14 @@ public class MetricProcessorService : IMetricProcessorService
     }
 
     public async Task ProcessMetricAsync(MetricMessage metric, CancellationToken cancellationToken = default)
-    {
-        _logger.LogInformation("===> ProcessMetricAsync CALLED");
-        
+    {        
         if (metric == null)
         {
-            _logger.LogWarning("===> Received null metric message");
             return;
         }
 
-        _logger.LogInformation("===> Metric Type: {Type}, Name: {Name}, Payload count: {Count}", 
-            metric.Type, metric.Name, metric.Payload?.Count ?? 0);
-
         var payloadJson = JsonSerializer.Serialize(metric.Payload ?? new Dictionary<string, object>());
         
-        _logger.LogInformation("===> PayloadJson: {Json}", payloadJson);
-
         var metricEntity = new Metric
         {
             Type = metric.Type ?? string.Empty,
@@ -48,24 +39,12 @@ public class MetricProcessorService : IMetricProcessorService
             CreatedAt = DateTime.UtcNow
         };
 
-        _logger.LogInformation("===> Adding metric to DbContext");
         _dbContext.Metrics.Add(metricEntity);
         
-        _logger.LogInformation("===> Calling SaveChangesAsync");
         var savedCount = await _dbContext.SaveChangesAsync(cancellationToken);
-        
-        _logger.LogInformation("===> SaveChangesAsync returned: {Count}", savedCount);
 
         if (savedCount > 0)
         {
-            _logger.LogInformation(
-                "===> Metric saved to database - Id: {Id}, Type: {Type}, Name: {Name}",
-                metricEntity.Id,
-                metric.Type,
-                metric.Name);
-
-            // Notify Gateway to broadcast via SignalR
-            _logger.LogInformation("===> Calling NotifyMetricSavedAsync");
             await _notificationService.NotifyMetricSavedAsync(metricEntity.Id, cancellationToken);
         }
         else

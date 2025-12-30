@@ -1,9 +1,9 @@
 using CharonDataProcessor.Configuration;
 using CharonDataProcessor.Consumers;
-using CharonDataProcessor.Models;
 using CharonDataProcessor.Services;
 using CharonDataProcessor.Services.Interfaces;
 using CharonDbContext.Data;
+using CharonDbContext.Messages;
 using FluentAssertions;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
@@ -99,6 +99,8 @@ public class MassTransitConsumerIntegrationTests : IAsyncLifetime
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseSqlServer(sqlConnectionString));
 
+        services.AddHttpClient();
+
         services.Configure<RabbitMqOptions>(options =>
         {
             options.HostName = rabbitMqOptions.HostName;
@@ -109,6 +111,12 @@ public class MassTransitConsumerIntegrationTests : IAsyncLifetime
             options.QueueName = rabbitMqOptions.QueueName;
         });
 
+        services.Configure<GatewayOptions>(opts =>
+        {
+            opts.BaseUrl = "http://localhost:9999"; // dummy URL for integration tests
+        });
+
+        services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IMetricProcessorService, MetricProcessorService>();
 
         services.AddMassTransit(x =>
