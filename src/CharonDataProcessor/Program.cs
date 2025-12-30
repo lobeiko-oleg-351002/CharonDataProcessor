@@ -2,7 +2,6 @@ using CharonDataProcessor.Configuration;
 using CharonDataProcessor.Consumers;
 using CharonDataProcessor.Middleware;
 using CharonDataProcessor.Middleware.Interfaces;
-using CharonDbContext.Messages;
 using CharonDataProcessor.Services;
 using CharonDataProcessor.Services.Decorators;
 using CharonDataProcessor.Services.Interfaces;
@@ -79,16 +78,12 @@ try
             var options = builder.Configuration.GetSection(RabbitMqOptions.SectionName).Get<RabbitMqOptions>();
             if (options != null)
             {
-                Log.Information("===> Configuring MassTransit RabbitMQ");
                 
                 cfg.Host(new Uri($"rabbitmq://{options.HostName}:{options.Port}"), h =>
                 {
                     h.Username(options.UserName);
                     h.Password(options.Password);
                 });
-
-                // Use CharonDbContext.Messages.MetricMessage - shared contract!
-                Log.Information("===> Using CharonDbContext.Messages.MetricMessage");
 
                 // Let MassTransit auto-configure the endpoint based on the message type
                 cfg.ConfigureEndpoints(context);
@@ -97,28 +92,14 @@ try
     });
 
     var app = builder.Build();
-    
+
     using (var scope = app.Services.CreateScope())
     {
         var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        try
-        {
-            // Use EnsureCreated for development - creates database schema without migrations
-            if (dbContext.Database.EnsureCreated())
-            {
-                Log.Information("Database created successfully");
-            }
-            else
-            {
-                Log.Information("Database already exists");
-            }
-        }
-        catch (Exception ex)
-        {
-            Log.Warning(ex, "Could not create database. Database may not be available yet.");
-        }
+
+        dbContext.Database.Migrate();
     }
-    
+
     if (app.Environment.IsDevelopment())
     {
         app.UseSwagger();

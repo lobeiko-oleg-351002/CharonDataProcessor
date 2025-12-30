@@ -1,8 +1,11 @@
-using CharonDataProcessor.Models;
+using CharonDataProcessor.Configuration;
 using CharonDataProcessor.Services;
+using CharonDataProcessor.Services.Interfaces;
 using CharonDbContext.Data;
+using CharonDbContext.Messages;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Testcontainers.MsSql;
@@ -30,15 +33,40 @@ public class DatabaseIntegrationTests : IAsyncLifetime
 
         var connectionString = _sqlContainer.GetConnectionString();
 
-        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseSqlServer(connectionString)
-            .Options;
+        // Set up services with dependencies
+        var services = new ServiceCollection();
 
-        _dbContext = new ApplicationDbContext(options);
+        // Add logging (required for both services)
+        services.AddLogging();
+
+        // Add HttpClientFactory
+        services.AddHttpClient();
+
+        // Register ApplicationDbContext
+        services.AddDbContext<ApplicationDbContext>(options =>
+            options.UseSqlServer(connectionString));
+
+        // Configure GatewayOptions
+        services.Configure<GatewayOptions>(opts =>
+        {
+            opts.BaseUrl = "http://localhost:9999"; // dummy URL - won't be called in test unless you want to verify
+        });
+
+        // Register NotificationService
+        services.AddScoped<INotificationService, NotificationService>();
+
+        // Register MetricProcessorService (your SUT)
+        services.AddScoped<MetricProcessorService>();
+
+        // Build provider
+        var serviceProvider = services.BuildServiceProvider();
+
+        // Get the DbContext from the container and ensure database is created
+        _dbContext = serviceProvider.GetRequiredService<ApplicationDbContext>();
         await _dbContext.Database.EnsureCreatedAsync();
 
-        var loggerMock = new Mock<ILogger<MetricProcessorService>>();
-        _service = new MetricProcessorService(_dbContext, loggerMock.Object);
+        // Resolve the service with all dependencies injected
+        _service = serviceProvider.GetRequiredService<MetricProcessorService>();
     }
 
     public async Task DisposeAsync()
