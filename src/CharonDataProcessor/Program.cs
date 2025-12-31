@@ -44,6 +44,8 @@ try
         builder.Configuration.GetSection(DatabaseOptions.SectionName));
     builder.Services.Configure<GatewayOptions>(
         builder.Configuration.GetSection(GatewayOptions.SectionName));
+    builder.Services.Configure<NotificationOptions>(
+        builder.Configuration.GetSection(NotificationOptions.SectionName));
 
     var databaseOptions = builder.Configuration.GetSection(DatabaseOptions.SectionName).Get<DatabaseOptions>();
     if (!string.IsNullOrEmpty(databaseOptions?.ConnectionString))
@@ -93,11 +95,23 @@ try
 
     var app = builder.Build();
 
-    using (var scope = app.Services.CreateScope())
+    // Apply database migrations
+    if (!string.IsNullOrEmpty(databaseOptions?.ConnectionString))
     {
-        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-        dbContext.Database.Migrate();
+        using (var scope = app.Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            try
+            {
+                Log.Information("Applying database migrations...");
+                await dbContext.Database.MigrateAsync();
+                Log.Information("Database migrations applied successfully");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to apply database migrations: {Error}", ex.Message);
+            }
+        }
     }
 
     if (app.Environment.IsDevelopment())

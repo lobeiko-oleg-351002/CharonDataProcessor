@@ -7,12 +7,12 @@ namespace CharonDataProcessor.Services;
 public class NotificationService : INotificationService
 {
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly GatewayOptions _options;
+    private readonly NotificationOptions _options;
     private readonly ILogger<NotificationService> _logger;
 
     public NotificationService(
         IHttpClientFactory httpClientFactory,
-        IOptions<GatewayOptions> options,
+        IOptions<NotificationOptions> options,
         ILogger<NotificationService> logger)
     {
         _httpClientFactory = httpClientFactory;
@@ -30,19 +30,19 @@ public class NotificationService : INotificationService
 
             if (response.IsSuccessStatusCode)
             {
-                _logger.LogInformation("Successfully notified gateway about metric {MetricId}", metricId);
+                _logger.LogInformation("Successfully notified notifications service about metric {MetricId}", metricId);
             }
             else
             {
                 _logger.LogWarning(
-                    "Failed to notify gateway about metric {MetricId}. Status: {StatusCode}",
+                    "Failed to notify notifications service about metric {MetricId}. Status: {StatusCode}",
                     metricId,
                     response.StatusCode);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error notifying gateway about metric {MetricId}", metricId);
+            _logger.LogError(ex, "Error notifying notifications service about metric {MetricId}", metricId);
             // Don't throw - notification failure shouldn't break metric processing
         }
     }
