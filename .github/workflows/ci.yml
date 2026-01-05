@@ -25,33 +25,8 @@ jobs:
     name: Build and Test
     runs-on: ubuntu-latest
     
-    services:
-      rabbitmq:
-        image: rabbitmq:3-management-alpine
-        ports:
-          - 5672:5672
-          - 15672:15672
-        options: >-
-          --health-cmd "rabbitmq-diagnostics -q ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-      
-      sqlserver:
-        image: mcr.microsoft.com/mssql/server:2022-latest
-        env:
-          ACCEPT_EULA: Y
-          SA_PASSWORD: YourStrong@Passw0rd
-          MSSQL_PID: Express
-          MSSQL_AGENT_ENABLED: 'false'
-        ports:
-          - 1433:1433
-        options: >-
-          --health-cmd "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourStrong@Passw0rd -C -Q 'SELECT 1' || exit 1"
-          --health-interval 15s
-          --health-timeout 10s
-          --health-retries 15
-          --health-start-period 90s
+    # No service containers needed - integration tests use Testcontainers
+    # which automatically manages SQL Server and RabbitMQ containers
     
     steps:
     - name: Checkout code
@@ -75,45 +50,8 @@ jobs:
       run: dotnet test CharonDataProcessor.Tests/CharonDataProcessor.Tests.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
       continue-on-error: false
       
-    - name: Install SQL Server tools
-      run: |
-        curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
-        curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
-        sudo apt-get update
-        sudo ACCEPT_EULA=Y apt-get install -y mssql-tools unixodbc-dev
-        echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> $GITHUB_ENV
-      
-    - name: Wait for SQL Server to be ready
-      run: |
-        echo "Waiting for SQL Server to be ready..."
-        for i in {1..60}; do
-          if /opt/mssql-tools/bin/sqlcmd -S localhost,1433 -U sa -P YourStrong@Passw0rd -C -Q "SELECT 1" 2>/dev/null; then
-            echo "SQL Server is ready"
-            break
-          fi
-          echo "Waiting for SQL Server... ($i/60)"
-          sleep 3
-        done
-      
-    - name: Install EF Core tools
-      run: dotnet tool install --global dotnet-ef || dotnet tool update --global dotnet-ef
-      
-    - name: Apply database migrations
-      working-directory: ${{ env.PROJECT_PATH }}
-      env:
-        ConnectionStrings__DefaultConnection: "Server=localhost,1433;Database=CharonTest;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;"
-      run: |
-        dotnet ef database update --project CharonDataProcessor/CharonDataProcessor.csproj --connection "Server=localhost,1433;Database=CharonTest;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;" --verbose
-      continue-on-error: false
-      
     - name: Run integration tests
       working-directory: ${{ env.PROJECT_PATH }}
-      env:
-        RABBITMQ_HOSTNAME: localhost
-        RABBITMQ_PORT: 5672
-        RABBITMQ_USERNAME: guest
-        RABBITMQ_PASSWORD: guest
-        ConnectionStrings__DefaultConnection: "Server=localhost,1433;Database=CharonTest;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;"
       run: dotnet test CharonDataProcessor.IntegrationTests/CharonDataProcessor.IntegrationTests.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=integration-test-results.trx"
       continue-on-error: false
       
