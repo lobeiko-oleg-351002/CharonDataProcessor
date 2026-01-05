@@ -92,7 +92,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
-        file: ./src/Dockerfile
+        file: CharonDataProcessor/src/Dockerfile
         push: false
         tags: charondataprocessor:latest
         cache-from: type=gha
