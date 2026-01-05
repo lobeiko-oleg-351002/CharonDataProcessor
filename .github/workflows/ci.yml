@@ -91,8 +91,8 @@ jobs:
     - name: Build Docker image
       uses: docker/build-push-action@v5
       with:
-        context: .
-        file: CharonDataProcessor/src/Dockerfile
+        context: ./src
+        file: ./src/Dockerfile
         push: false
         tags: charondataprocessor:latest
         cache-from: type=gha
