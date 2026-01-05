@@ -46,10 +46,11 @@ jobs:
         ports:
           - 1433:1433
         options: >-
-          --health-cmd "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourStrong@Passw0rd -Q 'SELECT 1' || exit 1"
+          --health-cmd "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourStrong@Passw0rd -C -Q 'SELECT 1' || exit 1"
           --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
+          --health-timeout 10s
+          --health-retries 30
+          --health-start-period 40s
     
     steps:
     - name: Checkout code
@@ -84,13 +85,13 @@ jobs:
     - name: Wait for SQL Server to be ready
       run: |
         echo "Waiting for SQL Server to be ready..."
-        for i in {1..30}; do
-          if /opt/mssql-tools/bin/sqlcmd -S localhost,1433 -U sa -P YourStrong@Passw0rd -Q "SELECT 1" -C 2>/dev/null; then
+        for i in {1..60}; do
+          if /opt/mssql-tools/bin/sqlcmd -S localhost,1433 -U sa -P YourStrong@Passw0rd -C -Q "SELECT 1" 2>/dev/null; then
             echo "SQL Server is ready"
             break
           fi
-          echo "Waiting for SQL Server... ($i/30)"
-          sleep 2
+          echo "Waiting for SQL Server... ($i/60)"
+          sleep 3
         done
       
     - name: Install EF Core tools
