@@ -5,23 +5,19 @@ EXPOSE 8080
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
-COPY ["CharonDataProcessor/src/CharonDataProcessor/CharonDataProcessor.csproj", "CharonDataProcessor/src/CharonDataProcessor/"]
+# Copy solution and project files
+COPY ["CharonDataProcessor.sln", "."]
+COPY ["CharonDataProcessor/CharonDataProcessor.csproj", "CharonDataProcessor/"]
 
-COPY ["nuget-packages/", "/nuget-packages/"]
+# Restore dependencies
+RUN dotnet restore "CharonDataProcessor/CharonDataProcessor.csproj"
 
-RUN if [ -d "/nuget-packages" ] && [ "$(ls -A /nuget-packages/*.nupkg 2>/dev/null)" ]; then \
-        dotnet nuget add source /nuget-packages --name local-packages; \
-    fi
-
-RUN dotnet restore "CharonDataProcessor/src/CharonDataProcessor/CharonDataProcessor.csproj"
-
-COPY ["CharonDataProcessor/src/CharonDataProcessor/", "CharonDataProcessor/src/CharonDataProcessor/"]
-
-WORKDIR "/src/CharonDataProcessor/src/CharonDataProcessor"
+# Copy everything else and build
+COPY . .
+WORKDIR "/src/CharonDataProcessor"
 RUN dotnet build "CharonDataProcessor.csproj" -c Release -o /app/build
 
 FROM build AS publish
-WORKDIR "/src/CharonDataProcessor/src/CharonDataProcessor"
 RUN dotnet publish "CharonDataProcessor.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
